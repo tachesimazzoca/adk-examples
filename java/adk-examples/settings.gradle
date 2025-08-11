@@ -1,0 +1,3 @@
+rootProject.name = 'adk-examples'
+
+include 'adk-examples-basic'
