@@ -1,3 +1,4 @@
 rootProject.name = 'adk-examples'
 
 include 'adk-examples-basic'
+include 'adk-examples-workflow'
