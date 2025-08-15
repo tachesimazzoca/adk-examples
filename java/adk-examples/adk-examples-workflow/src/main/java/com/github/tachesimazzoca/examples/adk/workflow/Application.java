@@ -1,7 +1,7 @@
 package com.github.tachesimazzoca.examples.adk.workflow;
 
 import com.github.tachesimazzoca.examples.adk.workflow.agets.CustomAgent;
-import com.google.adk.agents.InvocationContext;
+import com.github.tachesimazzoca.examples.adk.workflow.flows.CustomFlowProcessor;
 import com.google.adk.agents.LoopAgent;
 import com.google.adk.agents.ParallelAgent;
 import com.google.adk.agents.SequentialAgent;
@@ -11,7 +11,7 @@ import com.google.adk.sessions.Session;
 import com.google.genai.types.Content;
 import com.google.genai.types.Part;
 import io.reactivex.rxjava3.core.Flowable;
-import java.util.function.Function;
+import io.reactivex.rxjava3.core.Single;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.WebApplicationType;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -30,8 +30,14 @@ public class Application {
       final String APP_NAME = "adk-examples-workflow";
       final String USER_ID = "user-1";
 
-      Function<InvocationContext, Flowable<Event>> researchFunction =
+      CustomFlowProcessor researchProcessor =
           context -> {
+            try {
+              // Simulate some research work
+              Thread.sleep(1000);
+            } catch (InterruptedException e) {
+              return Single.error(e);
+            }
             String agentName = context.agent().name();
             String branchName = context.branch().orElse("none");
             String message =
@@ -44,11 +50,11 @@ public class Application {
                     .content(Content.fromParts(Part.fromText(message)))
                     .build();
 
-            return Flowable.just(event);
+            return Single.just(event);
           };
-      CustomAgent researcher1 = new CustomAgent("researcher-1", "", researchFunction);
-      CustomAgent researcher2 = new CustomAgent("researcher-2", "", researchFunction);
-      CustomAgent researcher3 = new CustomAgent("researcher-3", "", researchFunction);
+      CustomAgent researcher1 = new CustomAgent("researcher-1", "", researchProcessor);
+      CustomAgent researcher2 = new CustomAgent("researcher-2", "", researchProcessor);
+      CustomAgent researcher3 = new CustomAgent("researcher-3", "", researchProcessor);
       ParallelAgent researchStage =
           ParallelAgent.builder()
               .name("research-stage")
