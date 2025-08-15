@@ -32,17 +32,14 @@ public class Application {
 
       CustomFlowProcessor researchProcessor =
           context -> {
-            try {
-              // Simulate some research work
-              Thread.sleep(1000);
-            } catch (InterruptedException e) {
-              return Single.error(e);
-            }
             String agentName = context.agent().name();
             String branchName = context.branch().orElse("none");
+            // Generate a random delay to simulate asynchronous processing
+            long delay = (long) (Math.random() * 5 + 1); // Random delay between 1 and 5 seconds
             String message =
                 String.format(
-                    "This is a research result from %s at the branch %s.", agentName, branchName);
+                    "This is a result from %s at the branch %s in delay %d seconds.",
+                    agentName, branchName, delay);
             Event event =
                 Event.builder()
                     .author(agentName)
@@ -50,7 +47,7 @@ public class Application {
                     .content(Content.fromParts(Part.fromText(message)))
                     .build();
 
-            return Single.just(event);
+            return Single.just(event).delay(delay, java.util.concurrent.TimeUnit.SECONDS);
           };
       CustomAgent researcher1 = new CustomAgent("researcher-1", "", researchProcessor);
       CustomAgent researcher2 = new CustomAgent("researcher-2", "", researchProcessor);
