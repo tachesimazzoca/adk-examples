@@ -1,11 +1,13 @@
 package com.github.tachesimazzoca.examples.adk.llm;
 
+import com.github.tachesimazzoca.examples.adk.llm.tools.ConversationTools;
 import com.google.adk.agents.LlmAgent;
 import com.google.adk.agents.LoopAgent;
 import com.google.adk.agents.SequentialAgent;
 import com.google.adk.events.Event;
 import com.google.adk.runner.InMemoryRunner;
 import com.google.adk.sessions.Session;
+import com.google.adk.tools.FunctionTool;
 import com.google.genai.types.Content;
 import com.google.genai.types.Part;
 import io.reactivex.rxjava3.core.Flowable;
@@ -38,7 +40,7 @@ public class Application {
 
                    Rules:
                    1. The format is `Title: <A Capitalized Title>`.
-                   1. You can add a brief description after the title.
+                   2. You can add a brief description after the title.
                    """)
               .outputKey(OUTPUT_CONVERSATION)
               .build();
@@ -52,16 +54,29 @@ public class Application {
 
           Rules:
           1. The format is `name > message`.
-          2. If your name is `facilitator`, please add a line as your advice only if you
-          think it would be better for the other participants to focus on the goal.
+          2. if you find the marker `(END OF CONVERSATION)` at the last line, call
+          the function `exitLoop`.
           """;
 
       LlmAgent facilitator =
           LlmAgent.builder()
               .name("facilitator")
               .model("gemini-2.5-flash")
-              .instruction(instruction)
+              .instruction(
+                  instruction
+                      + """
+
+              Note: You are the facilitator of the conversation.
+              1. First, add your comment as a facilitator to begin the conversation.
+              2. Skip adding your comment if the conversation is going well. In other
+              words, when the goal of conversation fractures, you can advise the participants
+              to focus on the original topic.
+              3. If you decide to end the conversation, add your comment to conclude
+              the conversation, and add the marker `(END OF CONVERSATION)` at the last line of
+              the conversation.
+              """)
               .outputKey(OUTPUT_CONVERSATION)
+              .tools(FunctionTool.create(ConversationTools.class, "exitLoop"))
               .build();
 
       LlmAgent alice =
@@ -70,6 +85,7 @@ public class Application {
               .model("gemini-2.5-flash")
               .instruction(instruction)
               .outputKey(OUTPUT_CONVERSATION)
+              .tools(FunctionTool.create(ConversationTools.class, "exitLoop"))
               .build();
 
       LlmAgent bob =
@@ -78,13 +94,14 @@ public class Application {
               .model("gemini-2.5-flash")
               .instruction(instruction)
               .outputKey(OUTPUT_CONVERSATION)
+              .tools(FunctionTool.create(ConversationTools.class, "exitLoop"))
               .build();
 
       LoopAgent conversationLoop =
           LoopAgent.builder()
               .name(APP_NAME)
               .subAgents(facilitator, alice, bob)
-              .maxIterations(3)
+              .maxIterations(10)
               .build();
 
       SequentialAgent rootAgent =
@@ -108,5 +125,6 @@ public class Application {
             }
           });
     };
+
   }
 }
