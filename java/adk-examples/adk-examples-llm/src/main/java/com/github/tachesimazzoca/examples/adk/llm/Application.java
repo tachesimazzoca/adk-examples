@@ -11,6 +11,7 @@ import com.google.adk.tools.FunctionTool;
 import com.google.genai.types.Content;
 import com.google.genai.types.Part;
 import io.reactivex.rxjava3.core.Flowable;
+import java.util.Optional;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.WebApplicationType;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -43,6 +44,7 @@ public class Application {
                    2. You can add a brief description after the title.
                    """)
               .outputKey(OUTPUT_CONVERSATION)
+              .includeContents(LlmAgent.IncludeContents.NONE)
               .build();
 
       final String instruction =
@@ -54,8 +56,7 @@ public class Application {
 
           Rules:
           1. The format is `name > message`.
-          2. if you find the marker `(END OF CONVERSATION)` at the last line, call
-          the function `exitLoop`.
+          2. if you find the marker `(END OF CONVERSATION)` at the end of a line, call the function `exitLoop`.
           """;
 
       LlmAgent facilitator =
@@ -71,11 +72,11 @@ public class Application {
               2. Skip adding your comment if the conversation is going well. In other
               words, when the goal of conversation fractures, you can advise the participants
               to focus on the original topic.
-              3. If you decide to end the conversation, add your comment to conclude
-              the conversation, and add the marker `(END OF CONVERSATION)` at the last line of
-              the conversation.
+              3. If you decide to end the conversation, add your comment to conclude the conversation
+              with the marker `(END OF CONVERSATION)` at the end of line.
               """)
               .outputKey(OUTPUT_CONVERSATION)
+              .includeContents(LlmAgent.IncludeContents.NONE)
               .tools(FunctionTool.create(ConversationTools.class, "exitLoop"))
               .build();
 
@@ -85,6 +86,7 @@ public class Application {
               .model("gemini-2.5-flash")
               .instruction(instruction)
               .outputKey(OUTPUT_CONVERSATION)
+              .includeContents(LlmAgent.IncludeContents.NONE)
               .tools(FunctionTool.create(ConversationTools.class, "exitLoop"))
               .build();
 
@@ -94,6 +96,7 @@ public class Application {
               .model("gemini-2.5-flash")
               .instruction(instruction)
               .outputKey(OUTPUT_CONVERSATION)
+              .includeContents(LlmAgent.IncludeContents.NONE)
               .tools(FunctionTool.create(ConversationTools.class, "exitLoop"))
               .build();
 
@@ -101,11 +104,21 @@ public class Application {
           LoopAgent.builder()
               .name(APP_NAME)
               .subAgents(facilitator, alice, bob)
-              .maxIterations(10)
+              .maxIterations(2)
+              .build();
+
+      LlmAgent translator =
+          LlmAgent.builder()
+              .name("translator")
+              .model("gemini-2.5-flash")
+              .instruction("""
+              Translate the conversation text into German.
+              """)
+              .outputKey(OUTPUT_CONVERSATION)
               .build();
 
       SequentialAgent rootAgent =
-          SequentialAgent.builder().name(APP_NAME).subAgents(organizer, conversationLoop).build();
+          SequentialAgent.builder().name(APP_NAME).subAgents(organizer, conversationLoop, translator).build();
 
       InMemoryRunner runner = new InMemoryRunner(rootAgent);
       Session session = runner.sessionService().createSession(APP_NAME, USER_ID).blockingGet();
@@ -114,17 +127,18 @@ public class Application {
       Content prompt =
           Content.fromParts(
               Part.fromText(
-                  "Let:s talk about DDD (Domain-Driven Design) in software development."));
-      Flowable<Event> eventStream = runner.runAsync(USER_ID, session.id(), prompt);
+                  "Let's talk about DDD (Domain-Driven Design) in software development."));
+      final String sessionId = session.id();
+      Flowable<Event> eventStream = runner.runAsync(USER_ID, sessionId, prompt);
 
       // Stream event response
       eventStream.blockingForEach(
           event -> {
             if (event.finalResponse()) {
               System.out.println(event.stringifyContent());
+              System.out.println("---");
             }
           });
     };
-
   }
 }
