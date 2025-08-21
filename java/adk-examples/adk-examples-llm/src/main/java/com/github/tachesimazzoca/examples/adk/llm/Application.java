@@ -103,7 +103,7 @@ public class Application {
           LoopAgent.builder()
               .name(APP_NAME)
               .subAgents(facilitator, alice, bob)
-              .maxIterations(2)
+              .maxIterations(10)
               .build();
 
       LlmAgent translator =
@@ -112,7 +112,7 @@ public class Application {
               .model("gemini-2.5-flash")
               .instruction(
                   """
-              Translate the conversation text into German.
+              Translate the conversation text into Japanese.
               """)
               .outputKey(OUTPUT_CONVERSATION)
               .build();
