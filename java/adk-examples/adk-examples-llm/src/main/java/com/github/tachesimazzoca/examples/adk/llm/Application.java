@@ -11,6 +11,10 @@ import com.google.adk.tools.FunctionTool;
 import com.google.genai.types.Content;
 import com.google.genai.types.Part;
 import io.reactivex.rxjava3.core.Flowable;
+import java.io.FileDescriptor;
+import java.io.FileOutputStream;
+import java.io.PrintStream;
+import java.nio.charset.StandardCharsets;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.WebApplicationType;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -112,7 +116,8 @@ public class Application {
               .model("gemini-2.5-flash")
               .instruction(
                   """
-              Translate the conversation text into Japanese.
+              Add a translated text in Japanese for each line.
+              - It may contain some redundant lines, so please remove them.
               """)
               .outputKey(OUTPUT_CONVERSATION)
               .build();
@@ -133,6 +138,9 @@ public class Application {
                   "Let's talk about DDD (Domain-Driven Design) in software development."));
       final String sessionId = session.id();
       Flowable<Event> eventStream = runner.runAsync(USER_ID, sessionId, prompt);
+
+      System.setOut(
+          new PrintStream(new FileOutputStream(FileDescriptor.out), true, StandardCharsets.UTF_8));
 
       // Stream event response
       eventStream.blockingForEach(
