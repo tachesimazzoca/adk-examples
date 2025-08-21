@@ -11,7 +11,6 @@ import com.google.adk.tools.FunctionTool;
 import com.google.genai.types.Content;
 import com.google.genai.types.Part;
 import io.reactivex.rxjava3.core.Flowable;
-import java.util.Optional;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.WebApplicationType;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -33,7 +32,7 @@ public class Application {
 
       LlmAgent organizer =
           LlmAgent.builder()
-              .name("owner")
+              .name("organizer")
               .model("gemini-2.5-flash")
               .instruction(
                   """
@@ -111,14 +110,18 @@ public class Application {
           LlmAgent.builder()
               .name("translator")
               .model("gemini-2.5-flash")
-              .instruction("""
+              .instruction(
+                  """
               Translate the conversation text into German.
               """)
               .outputKey(OUTPUT_CONVERSATION)
               .build();
 
       SequentialAgent rootAgent =
-          SequentialAgent.builder().name(APP_NAME).subAgents(organizer, conversationLoop, translator).build();
+          SequentialAgent.builder()
+              .name(APP_NAME)
+              .subAgents(organizer, conversationLoop, translator)
+              .build();
 
       InMemoryRunner runner = new InMemoryRunner(rootAgent);
       Session session = runner.sessionService().createSession(APP_NAME, USER_ID).blockingGet();
